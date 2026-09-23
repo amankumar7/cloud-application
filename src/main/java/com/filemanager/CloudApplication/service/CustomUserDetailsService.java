@@ -1,0 +1,51 @@
+package com.filemanager.CloudApplication.service;
+
+import com.filemanager.CloudApplication.entity.User;
+import com.filemanager.CloudApplication.repository.UserRepository;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+
+@Service
+public class CustomUserDetailsService implements UserDetailsService {
+
+    private final UserRepository userRepository;
+
+    public CustomUserDetailsService(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
+
+    @Override
+    public UserDetails loadUserByUsername(String email)
+            throws UsernameNotFoundException {
+
+        User user = userRepository
+                .findByEmailIgnoreCaseAndDeletedAtIsNull(email)
+                .orElseThrow(() ->
+                        new UsernameNotFoundException(
+                                "Invalid credentials"
+                        )
+                );
+
+        return org.springframework.security.core.userdetails.User
+                .withUsername(user.getEmail())
+                .password(user.getPasswordHash())
+                .authorities(
+                        user.getRoles()
+                                .stream()
+                                .map(role ->
+                                        new SimpleGrantedAuthority(
+                                                role.getName()
+                                        )
+                                )
+                                .toList()
+                )
+                .accountExpired(!user.isAccountNonExpired())
+                .accountLocked(!user.isAccountNonLocked())
+                .credentialsExpired(!user.isCredentialsNonExpired())
+                .disabled(!user.isEnabled())
+                .build();
+    }
+}
