@@ -12,6 +12,9 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -68,45 +71,98 @@ public class JwtConfig {
                 .build();
     }
 
-    private PrivateKey loadPrivateKey(String key)
+    /**
+     * Reads the PRIVATE KEY from the file path.
+     */
+    private PrivateKey loadPrivateKey(String filePath)
             throws Exception {
 
-        String normalizedKey =
-                key
-                        .replace("-----BEGIN PRIVATE KEY-----", "")
-                        .replace("-----END PRIVATE KEY-----", "")
-                        .replaceAll("\\s+", "");
+        if (filePath == null || filePath.isBlank()) {
+            throw new IllegalStateException(
+                    "JWT private key file path is not configured"
+            );
+        }
 
-        byte[] keyBytes =
-                Base64.getDecoder().decode(normalizedKey);
+        Path path = Path.of(filePath);
 
-        PKCS8EncodedKeySpec spec =
-                new PKCS8EncodedKeySpec(keyBytes);
+        if (!Files.exists(path)) {
+            throw new IllegalStateException(
+                    "JWT private key file does not exist: "
+                            + filePath
+            );
+        }
+
+        // Read PEM file
+        String key = Files.readString(
+                path,
+                StandardCharsets.UTF_8
+        );
+
+        // Remove PEM headers/footer
+        key = key
+                .replace("-----BEGIN PRIVATE KEY-----", "")
+                .replace("-----END PRIVATE KEY-----", "")
+                .replaceAll("\\s+", "");
+
+        // Decode Base64
+        byte[] decoded =
+                Base64.getDecoder().decode(key);
+
+        // PKCS#8
+        PKCS8EncodedKeySpec keySpec =
+                new PKCS8EncodedKeySpec(decoded);
 
         KeyFactory keyFactory =
                 KeyFactory.getInstance("RSA");
 
-        return keyFactory.generatePrivate(spec);
+        return keyFactory.generatePrivate(keySpec);
     }
 
-    private PublicKey loadPublicKey(String key)
+    /**
+     * Reads the PUBLIC KEY from the file path.
+     */
+    private PublicKey loadPublicKey(String filePath)
             throws Exception {
 
-        String normalizedKey =
-                key
-                        .replace("-----BEGIN PUBLIC KEY-----", "")
-                        .replace("-----END PUBLIC KEY-----", "")
-                        .replaceAll("\\s+", "");
+        if (filePath == null || filePath.isBlank()) {
+            throw new IllegalStateException(
+                    "JWT public key file path is not configured"
+            );
+        }
 
-        byte[] keyBytes =
-                Base64.getDecoder().decode(normalizedKey);
+        Path path = Path.of(filePath);
 
-        X509EncodedKeySpec spec =
-                new X509EncodedKeySpec(keyBytes);
+        if (!Files.exists(path)) {
+            throw new IllegalStateException(
+                    "JWT public key file does not exist: "
+                            + filePath
+            );
+        }
+
+        // Read PEM file
+        String key = Files.readString(
+                path,
+                StandardCharsets.UTF_8
+        );
+
+        // Remove PEM headers/footer
+        key = key
+                .replace("-----BEGIN PUBLIC KEY-----", "")
+                .replace("-----END PUBLIC KEY-----", "")
+                .replaceAll("\\s+", "");
+
+        // Decode Base64
+        byte[] decoded =
+                Base64.getDecoder().decode(key);
+
+        // X.509 public key
+        X509EncodedKeySpec keySpec =
+                new X509EncodedKeySpec(decoded);
 
         KeyFactory keyFactory =
                 KeyFactory.getInstance("RSA");
 
-        return keyFactory.generatePublic(spec);
+        return keyFactory.generatePublic(keySpec);
     }
+
 }

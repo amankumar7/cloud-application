@@ -554,26 +554,27 @@ public class AuthService {
         /*
          * Logout should be idempotent.
          */
-        if (rawRefreshToken == null
-                || rawRefreshToken.isBlank()) {
+        if (rawRefreshToken == null ||
+                rawRefreshToken.isBlank()) {
 
             return;
         }
 
-
         /*
-         * Revoke refresh token in DB.
+         * Revoke refresh token and get
+         * the associated user.
          */
-        refreshTokenService.revokeRefreshToken(
-                rawRefreshToken
-        );
-
+        User user =
+                refreshTokenService.revokeRefreshToken(
+                        rawRefreshToken
+                );
 
         /*
-         * Audit event.
+         * Audit logout event only when
+         * the refresh token belongs to a user.
          */
         saveAuthenticationEvent(
-                null,
+                user,
                 AuthenticationEventType.LOGOUT,
                 true,
                 ipAddress,

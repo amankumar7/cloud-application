@@ -15,6 +15,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -343,35 +344,58 @@ public class RefreshTokenService {
      * Used during logout.
      */
     @Transactional
-    public void revokeRefreshToken(
-            String rawRefreshToken) {
+    public User revokeRefreshToken(String rawRefreshToken) {
 
-        if (rawRefreshToken == null
-                || rawRefreshToken.isBlank()) {
+        /*
+         * Logout should be idempotent.
+         *
+         * If no refresh token is supplied, simply return null.
+         */
+        if (rawRefreshToken == null ||
+                rawRefreshToken.isBlank()) {
 
-            return;
+            return null;
         }
 
+        String tokenHash = hashToken(rawRefreshToken);
 
-        String tokenHash =
-                hashToken(rawRefreshToken);
+        /*
+         * Find the refresh token.
+         *
+         * We don't throw an exception when the token
+         * doesn't exist because logout should be idempotent.
+         */
+        Optional<RefreshToken> tokenOptional =
+                refreshTokenRepository.findByTokenHash(tokenHash);
 
+        if (tokenOptional.isEmpty()) {
+            return null;
+        }
 
-        refreshTokenRepository
-                .findByTokenHash(tokenHash)
-                .ifPresent(token -> {
+        RefreshToken refreshToken =
+                tokenOptional.get();
 
-                    if (token.getRevokedAt() == null) {
+        /*
+         * Get the user before modifying the token.
+         */
+        User user =
+                refreshToken.getUser();
 
-                        token.setRevokedAt(
-                                Instant.now()
-                        );
+        /*
+         * If already revoked, logout is still successful.
+         */
+        if (refreshToken.isRevoked()) {
+            return user;
+        }
 
-                        refreshTokenRepository.save(
-                                token
-                        );
-                    }
-                });
+        /*
+         * Revoke this refresh token.
+         */
+        refreshToken.setRevokedAt(Instant.now());
+
+        refreshTokenRepository.save(refreshToken);
+
+        return user;
     }
 
 

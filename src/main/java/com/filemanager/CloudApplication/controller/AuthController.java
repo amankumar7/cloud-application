@@ -1,11 +1,12 @@
 package com.filemanager.CloudApplication.controller;
 
-
 import com.filemanager.CloudApplication.authentication.AuthService;
+import com.filemanager.CloudApplication.authentication.JwtProperties;
 import com.filemanager.CloudApplication.authentication.SecurityUtils;
 import com.filemanager.CloudApplication.dto.AuthResponse;
 import com.filemanager.CloudApplication.dto.LoginRequest;
 import com.filemanager.CloudApplication.dto.LogoutResponse;
+import com.filemanager.CloudApplication.dto.RefreshResponse;
 import com.filemanager.CloudApplication.dto.RegisterRequest;
 import com.filemanager.CloudApplication.dto.UserResponse;
 import com.filemanager.CloudApplication.entity.User;
@@ -19,6 +20,7 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,16 +28,17 @@ import java.util.UUID;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    private static final String REFRESH_TOKEN_COOKIE =
-            "refresh_token";
-
-    private static final long ACCESS_TOKEN_EXPIRATION =
-            900L;
+    private static final String REFRESH_TOKEN_COOKIE = "refresh_token";
 
     private final AuthService authService;
+    private final JwtProperties jwtProperties;
 
-    public AuthController(AuthService authService) {
+    public AuthController(
+            AuthService authService,
+            JwtProperties jwtProperties) {
+
         this.authService = authService;
+        this.jwtProperties = jwtProperties;
     }
 
     /**
@@ -45,8 +48,7 @@ public class AuthController {
     public ResponseEntity<UserResponse> register(
             @RequestBody RegisterRequest request) {
 
-        User user =
-                authService.register(request);
+        User user = authService.register(request);
 
         UserResponse response =
                 new UserResponse(
@@ -63,7 +65,7 @@ public class AuthController {
 
     /**
      * Login.
-     *
+     * <p>
      * Access token -> JSON response
      * Refresh token -> HttpOnly cookie
      */
@@ -104,7 +106,7 @@ public class AuthController {
                 new AuthResponse(
                         result.accessToken(),
                         "Bearer",
-                        ACCESS_TOKEN_EXPIRATION,
+                        jwtProperties.getAccessTokenExpiration(),
                         result.user().getId(),
                         result.user().getUsername(),
                         result.user().getEmail(),
@@ -115,15 +117,92 @@ public class AuthController {
     }
 
     /**
+     * Refresh access token.
+     * <p>
+     * Refresh token is read from HttpOnly cookie.
+     * <p>
+     * Old refresh token is revoked.
+     * New refresh token is returned as a new cookie.
+     */
+    @PostMapping("/refresh")
+    public ResponseEntity<RefreshResponse> refresh(
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse) {
+
+        String refreshToken =
+                extractRefreshToken(httpRequest);
+
+        String ipAddress =
+                extractClientIp(httpRequest);
+
+        String userAgent =
+                httpRequest.getHeader("User-Agent");
+
+        String deviceName =
+                extractDeviceName(userAgent);
+
+        AuthService.RefreshAuthResult result =
+                authService.refresh(
+                        refreshToken,
+                        ipAddress,
+                        userAgent,
+                        deviceName
+                );
+
+        /*
+         * Refresh token rotation.
+         *
+         * Replace old cookie with new refresh token.
+         */
+        ResponseCookie refreshCookie =
+                createRefreshTokenCookie(
+                        result.refreshToken()
+                );
+
+        httpResponse.addHeader(
+                "Set-Cookie",
+                refreshCookie.toString()
+        );
+
+        RefreshResponse response =
+                new RefreshResponse(
+                        result.accessToken(),
+                        "Bearer",
+                        jwtProperties.getAccessTokenExpiration()
+                );
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * Logout.
-     *
-     * The actual refresh-token revocation will be implemented
-     * in RefreshTokenService.
+     * <p>
+     * Refresh token is revoked in DB.
+     * Cookie is deleted from browser.
      */
     @PostMapping("/logout")
     public ResponseEntity<LogoutResponse> logout(
-            HttpServletResponse response) {
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse) {
 
+        String refreshToken =
+                extractRefreshToken(httpRequest);
+
+        String ipAddress =
+                extractClientIp(httpRequest);
+
+        String userAgent =
+                httpRequest.getHeader("User-Agent");
+
+        authService.logout(
+                refreshToken,
+                ipAddress,
+                userAgent
+        );
+
+        /*
+         * Delete refresh-token cookie.
+         */
         ResponseCookie deleteCookie =
                 ResponseCookie
                         .from(
@@ -132,12 +211,12 @@ public class AuthController {
                         )
                         .httpOnly(true)
                         .secure(true)
-                        .sameSite("Strict")
+                        .sameSite("None")
                         .path("/api/auth")
-                        .maxAge(0)
+                        .maxAge(Duration.ZERO)
                         .build();
 
-        response.addHeader(
+        httpResponse.addHeader(
                 "Set-Cookie",
                 deleteCookie.toString()
         );
@@ -158,16 +237,23 @@ public class AuthController {
         UUID userId =
                 SecurityUtils.getCurrentUserId();
 
-        return ResponseEntity.ok(
+        User user =
+                authService.getCurrentUser(userId);
+
+        UserResponse response =
                 new UserResponse(
-                        userId,
-                        null,
-                        null,
-                        List.of()
-                )
-        );
+                        user.getId(),
+                        user.getUsername(),
+                        user.getEmail(),
+                        getRoleNames(user)
+                );
+
+        return ResponseEntity.ok(response);
     }
 
+    /**
+     * Create refresh-token cookie.
+     */
     private ResponseCookie createRefreshTokenCookie(
             String refreshToken) {
 
@@ -177,13 +263,58 @@ public class AuthController {
                         refreshToken
                 )
                 .httpOnly(true)
-                .secure(true)
-                .sameSite("Strict")
+              //  .secure(true)
+                .secure(false)
+
+                /*
+                 * React frontend and API are different sites.
+                 *
+                 * SameSite=None requires Secure=true.
+                 */
+                //.sameSite("None")
+                .sameSite("Lax")
+
+
                 .path("/api/auth")
-                .maxAge(7 * 24 * 60 * 60)
+
+                .maxAge(
+                        Duration.ofSeconds(
+                                jwtProperties
+                                        .getRefreshTokenExpiration()
+                        )
+                )
+
                 .build();
     }
 
+    /**
+     * Extract refresh token from cookie.
+     */
+    private String extractRefreshToken(
+            HttpServletRequest request) {
+
+        Cookie[] cookies =
+                request.getCookies();
+
+        if (cookies == null) {
+            return null;
+        }
+
+        for (Cookie cookie : cookies) {
+
+            if (REFRESH_TOKEN_COOKIE.equals(
+                    cookie.getName())) {
+
+                return cookie.getValue();
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Convert User roles to String list.
+     */
     private List<String> getRoleNames(User user) {
 
         return user.getRoles()
@@ -192,16 +323,14 @@ public class AuthController {
                 .toList();
     }
 
+    /**
+     * Extract client IP.
+     * <p>
+     * Only trust X-Forwarded-For when the application
+     * is behind a trusted proxy/load balancer.
+     */
     private String extractClientIp(
             HttpServletRequest request) {
-
-        /*
-         * IMPORTANT:
-         *
-         * Only trust X-Forwarded-For when your application
-         * is behind a trusted proxy/load balancer that
-         * overwrites this header.
-         */
 
         String forwarded =
                 request.getHeader("X-Forwarded-For");
@@ -217,6 +346,9 @@ public class AuthController {
         return request.getRemoteAddr();
     }
 
+    /**
+     * Basic device detection.
+     */
     private String extractDeviceName(
             String userAgent) {
 
@@ -232,6 +364,10 @@ public class AuthController {
 
         if (userAgent.contains("iPhone")) {
             return "iPhone";
+        }
+
+        if (userAgent.contains("iPad")) {
+            return "iPad";
         }
 
         if (userAgent.contains("Windows")) {
