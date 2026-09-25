@@ -58,11 +58,9 @@ public class RefreshTokenService {
             String userAgent,
             String deviceName) {
 
-        String rawToken =
-                generateSecureToken();
+        String rawToken = generateSecureToken();
 
-        UUID tokenFamilyId =
-                UUID.randomUUID();
+        UUID tokenFamilyId = UUID.randomUUID();
 
         RefreshToken refreshToken =
                 buildRefreshToken(
@@ -74,9 +72,7 @@ public class RefreshTokenService {
                         deviceName
                 );
 
-        refreshTokenRepository.save(
-                refreshToken
-        );
+        refreshTokenRepository.save(refreshToken);
 
         return new RefreshTokenResult(
                 rawToken,
@@ -113,9 +109,6 @@ public class RefreshTokenService {
             String userAgent,
             String deviceName) {
 
-        /*
-         * Basic validation.
-         */
         if (rawToken == null
                 || rawToken.isBlank()) {
 
@@ -127,13 +120,9 @@ public class RefreshTokenService {
 
         /*
          * Hash the raw token.
-         *
-         * We NEVER search the database using
-         * the raw refresh token.
          */
-        String tokenHash =
-                hashToken(rawToken);
 
+        String tokenHash = hashToken(rawToken);
 
         /*
          * SELECT ... FOR UPDATE
@@ -182,17 +171,10 @@ public class RefreshTokenService {
 
         if (oldToken.isExpired()) {
 
-            oldToken.setRevokedAt(
-                    Instant.now()
-            );
+            oldToken.setRevokedAt( Instant.now() );
+            refreshTokenRepository.save( oldToken );
 
-            refreshTokenRepository.save(
-                    oldToken
-            );
-
-            throw new InvalidRefreshTokenException(
-                    "Refresh token expired"
-            );
+            throw new InvalidRefreshTokenException("Refresh token expired");
         }
 
 
@@ -200,22 +182,15 @@ public class RefreshTokenService {
         // USER CHECK
         // ========================================================
 
-        User user =
-                oldToken.getUser();
-
+        User user = oldToken.getUser();
 
         /*
          * User was deleted.
          */
         if (user.getDeletedAt() != null) {
 
-            oldToken.setRevokedAt(
-                    Instant.now()
-            );
-
-            refreshTokenRepository.save(
-                    oldToken
-            );
+            oldToken.setRevokedAt( Instant.now() );
+            refreshTokenRepository.save(oldToken);
 
             throw new InvalidRefreshTokenException(
                     "User account is not available"
@@ -228,13 +203,8 @@ public class RefreshTokenService {
          */
         if (!user.isEnabled()) {
 
-            oldToken.setRevokedAt(
-                    Instant.now()
-            );
-
-            refreshTokenRepository.save(
-                    oldToken
-            );
+            oldToken.setRevokedAt(Instant.now());
+            refreshTokenRepository.save(oldToken);
 
             throw new InvalidRefreshTokenException(
                     "User account is not available"
@@ -247,13 +217,8 @@ public class RefreshTokenService {
          */
         if (!user.isAccountNonLocked()) {
 
-            oldToken.setRevokedAt(
-                    Instant.now()
-            );
-
-            refreshTokenRepository.save(
-                    oldToken
-            );
+            oldToken.setRevokedAt(Instant.now());
+            refreshTokenRepository.save(oldToken);
 
             throw new InvalidRefreshTokenException(
                     "User account is not available"
@@ -265,8 +230,7 @@ public class RefreshTokenService {
         // CREATE NEW REFRESH TOKEN
         // ========================================================
 
-        String newRawToken =
-                generateSecureToken();
+        String newRawToken = generateSecureToken();
 
 
         /*
@@ -291,16 +255,10 @@ public class RefreshTokenService {
         // REVOKE OLD TOKEN
         // ========================================================
 
-        Instant now =
-                Instant.now();
-
+        Instant now = Instant.now();
         oldToken.setRevokedAt(now);
-
         oldToken.setUsedAt(now);
-
-        oldToken.setReplacedBy(
-                newToken
-        );
+        oldToken.setReplacedBy(newToken);
 
 
         // ========================================================
@@ -310,17 +268,13 @@ public class RefreshTokenService {
         /*
          * Save the new token first.
          */
-        refreshTokenRepository.save(
-                newToken
-        );
+        refreshTokenRepository.save(newToken);
 
 
         /*
          * Then mark old token as revoked.
          */
-        refreshTokenRepository.save(
-                oldToken
-        );
+        refreshTokenRepository.save(oldToken);
 
 
         // ========================================================
@@ -372,14 +326,12 @@ public class RefreshTokenService {
             return null;
         }
 
-        RefreshToken refreshToken =
-                tokenOptional.get();
+        RefreshToken refreshToken = tokenOptional.get();
 
         /*
          * Get the user before modifying the token.
          */
-        User user =
-                refreshToken.getUser();
+        User user = refreshToken.getUser();
 
         /*
          * If already revoked, logout is still successful.
@@ -392,7 +344,6 @@ public class RefreshTokenService {
          * Revoke this refresh token.
          */
         refreshToken.setRevokedAt(Instant.now());
-
         refreshTokenRepository.save(refreshToken);
 
         return user;

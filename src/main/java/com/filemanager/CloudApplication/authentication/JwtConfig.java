@@ -31,11 +31,9 @@ public class JwtConfig {
 
         try {
 
-            PrivateKey privateKey =
-                    loadPrivateKey(properties.getPrivateKey());
+            PrivateKey privateKey = loadPrivateKey(properties.getPrivateKey());
 
-            PublicKey publicKey =
-                    loadPublicKey(properties.getPublicKey());
+            PublicKey publicKey = loadPublicKey(properties.getPublicKey());
 
             return new RSAKey.Builder((RSAPublicKey) publicKey)
                     .privateKey(privateKey)
@@ -57,8 +55,7 @@ public class JwtConfig {
         JWKSet jwkSet = new JWKSet(rsaKey);
 
         ImmutableJWKSet<com.nimbusds.jose.proc.SecurityContext>
-                jwkSource =
-                new ImmutableJWKSet<>(jwkSet);
+                jwkSource = new ImmutableJWKSet<>(jwkSet);
 
         return new NimbusJwtEncoder(jwkSource);
     }
@@ -92,28 +89,22 @@ public class JwtConfig {
             );
         }
 
-        // Read PEM file
         String key = Files.readString(
                 path,
                 StandardCharsets.UTF_8
         );
 
-        // Remove PEM headers/footer
         key = key
                 .replace("-----BEGIN PRIVATE KEY-----", "")
                 .replace("-----END PRIVATE KEY-----", "")
                 .replaceAll("\\s+", "");
 
         // Decode Base64
-        byte[] decoded =
-                Base64.getDecoder().decode(key);
+        byte[] decoded = Base64.getDecoder().decode(key);
 
         // PKCS#8
-        PKCS8EncodedKeySpec keySpec =
-                new PKCS8EncodedKeySpec(decoded);
-
-        KeyFactory keyFactory =
-                KeyFactory.getInstance("RSA");
+        PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(decoded);
+        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
 
         return keyFactory.generatePrivate(keySpec);
     }
@@ -152,15 +143,11 @@ public class JwtConfig {
                 .replaceAll("\\s+", "");
 
         // Decode Base64
-        byte[] decoded =
-                Base64.getDecoder().decode(key);
+        byte[] decoded = Base64.getDecoder().decode(key);
 
         // X.509 public key
-        X509EncodedKeySpec keySpec =
-                new X509EncodedKeySpec(decoded);
-
-        KeyFactory keyFactory =
-                KeyFactory.getInstance("RSA");
+        X509EncodedKeySpec keySpec = new X509EncodedKeySpec(decoded);
+        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
 
         return keyFactory.generatePublic(keySpec);
     }

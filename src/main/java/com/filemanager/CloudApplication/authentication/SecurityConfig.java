@@ -23,11 +23,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final UserDetailsService userDetailsService;
-
     private final PasswordEncoder passwordEncoder;
-
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-
     private final SecurityErrorHandler securityErrorHandler;
 
 
@@ -37,17 +34,10 @@ public class SecurityConfig {
             JwtAuthenticationFilter jwtAuthenticationFilter,
             SecurityErrorHandler securityErrorHandler) {
 
-        this.userDetailsService =
-                userDetailsService;
-
-        this.passwordEncoder =
-                passwordEncoder;
-
-        this.jwtAuthenticationFilter =
-                jwtAuthenticationFilter;
-
-        this.securityErrorHandler =
-                securityErrorHandler;
+        this.userDetailsService = userDetailsService;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.securityErrorHandler = securityErrorHandler;
     }
 
 
@@ -126,10 +116,7 @@ public class SecurityConfig {
                         userDetailsService
                 );
 
-        provider.setPasswordEncoder(
-                passwordEncoder
-        );
-
+        provider.setPasswordEncoder(passwordEncoder);
         return provider;
     }
 

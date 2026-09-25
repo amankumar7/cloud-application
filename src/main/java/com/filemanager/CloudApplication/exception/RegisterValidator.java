@@ -29,9 +29,7 @@ public class RegisterValidator {
         }
 
         usernameValidator.validate(request.username());
-
         emailValidator.validate(request.email());
-
         passwordValidator.validate(request.password());
     }
 }

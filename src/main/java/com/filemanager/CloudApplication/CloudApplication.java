@@ -8,7 +8,6 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 @SpringBootApplication
 @EnableConfigurationProperties(JwtProperties.class)
-
 public class CloudApplication {
 
     public static void main(String[] args) {

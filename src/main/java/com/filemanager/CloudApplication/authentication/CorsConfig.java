@@ -14,13 +14,7 @@ public class CorsConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
-        CorsConfiguration configuration =
-                new CorsConfiguration();
-
-        /*
-         * NEVER use "*"
-         * when allowCredentials = true.
-         */
+        CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(
                 List.of(
                         "https://app.example.com"

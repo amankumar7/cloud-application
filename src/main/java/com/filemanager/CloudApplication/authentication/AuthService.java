@@ -29,38 +29,18 @@ import java.util.UUID;
 public class AuthService {
 
     private static final String DEFAULT_ROLE = "ROLE_USER";
-
-    /*
-     * Account locking configuration
-     */
     private static final int MAX_FAILED_LOGIN_ATTEMPTS = 5;
-
     private static final long LOCK_DURATION_MINUTES = 15;
-
     private final UserRepository userRepository;
-
     private final RoleRepository roleRepository;
-
     private final PasswordEncoder passwordEncoder;
-
     private final AuthenticationManager authenticationManager;
-
     private final JwtService jwtService;
-
     private final RefreshTokenService refreshTokenService;
-
     private final AuthenticationEventRepository authenticationEventRepository;
-
     private final RegisterValidator registerValidator;
-
     private final LoginValidator loginValidator;
 
-
-    /*
-     * Constructor injection
-     *
-     * No Lombok required.
-     */
     public AuthService(
             UserRepository userRepository,
             RoleRepository roleRepository,
@@ -145,9 +125,7 @@ public class AuthService {
          * Create user.
          */
         User user = new User();
-
         user.setUsername(username);
-
         user.setEmail(email);
 
         /*
@@ -160,17 +138,11 @@ public class AuthService {
         );
 
         user.setEnabled(true);
-
         user.setAccountNonLocked(true);
-
         user.setAccountNonExpired(true);
-
         user.setCredentialsNonExpired(true);
-
         user.setFailedLoginAttempts(0);
-
         user.setLockedUntil(null);
-
         user.getRoles().add(userRole);
 
 
@@ -271,7 +243,6 @@ public class AuthService {
                     "Invalid credentials"
             );
         }
-
 
         /*
          * Check permanent account lock.
@@ -462,19 +433,14 @@ public class AuthService {
                     );
 
 
-            RefreshToken newRefreshToken =
-                    result.refreshToken();
-
-
-            User user =
-                    newRefreshToken.getUser();
+            RefreshToken newRefreshToken = result.refreshToken();
+            User user = newRefreshToken.getUser();
 
 
             /*
              * Get user's roles.
              */
-            List<String> roles =
-                    getRoleNames(user);
+            List<String> roles = getRoleNames(user);
 
 
             /*

@@ -56,9 +56,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
 
             Jwt jwt = jwtService.validateToken(token);
-
-            List<String> roles =
-                    jwtService.getRoles(jwt);
+            List<String> roles = jwtService.getRoles(jwt);
 
             var authorities =
                     roles == null
@@ -79,21 +77,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
              * retrieve claims without parsing the token again.
              */
             authentication.setDetails(jwt);
-
             SecurityContextHolder
                     .getContext()
                     .setAuthentication(authentication);
 
         } catch (JwtException | IllegalArgumentException ex) {
-
-            /*
-             * Don't expose internal JWT validation details.
-             *
-             * We don't immediately write a 401 here because the
-             * Spring Security authorization layer should decide
-             * whether this endpoint requires authentication.
-             */
-
             SecurityContextHolder.clearContext();
         }
 
@@ -103,11 +91,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         } finally {
 
-            /*
-             * Prevent authentication from leaking when the same
-             * thread is reused.
-             */
             SecurityContextHolder.clearContext();
+
         }
     }
 }

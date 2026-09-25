@@ -32,7 +32,6 @@ public class JwtService {
             List<String> roles) {
 
         Instant now = Instant.now();
-
         Instant expiresAt =
                 now.plusSeconds(
                         jwtProperties.getAccessTokenExpiration()
@@ -42,31 +41,21 @@ public class JwtService {
 
         JwtClaimsSet claims =
                 JwtClaimsSet.builder()
-
                         .issuer(jwtProperties.getIssuer())
-
                         .audience(
                                 List.of(
                                         jwtProperties.getAudience()
                                 )
                         )
-
                         .subject(
                                 userId.toString()
                         )
-
                         .id(jti)
-
                         .issuedAt(now)
-
                         .expiresAt(expiresAt)
-
                         .claim("username", username)
-
                         .claim("email", email)
-
                         .claim("roles", roles)
-
                         .build();
 
         return jwtEncoder
@@ -77,41 +66,27 @@ public class JwtService {
     }
 
     public Jwt validateToken(String token) {
-
         return jwtDecoder.decode(token);
     }
 
     public UUID getUserId(Jwt jwt) {
-
-        return UUID.fromString(
-                jwt.getSubject()
-        );
+        return UUID.fromString( jwt.getSubject() );
     }
 
     public String getUsername(Jwt jwt) {
-
-        return jwt.getClaimAsString(
-                "username"
-        );
+        return jwt.getClaimAsString("username");
     }
 
     public String getEmail(Jwt jwt) {
-
-        return jwt.getClaimAsString(
-                "email"
-        );
+        return jwt.getClaimAsString("email");
     }
 
-    @SuppressWarnings("unchecked")
-    public List<String> getRoles(Jwt jwt) {
 
-        return jwt.getClaimAsStringList(
-                "roles"
-        );
+    public List<String> getRoles(Jwt jwt) {
+        return jwt.getClaimAsStringList("roles");
     }
 
     public String getTokenId(Jwt jwt) {
-
         return jwt.getId();
     }
 }

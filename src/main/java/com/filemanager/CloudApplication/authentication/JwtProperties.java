@@ -16,7 +16,7 @@ public class JwtProperties {
 
     /**
      * Refresh token lifetime in seconds.
-     *
+     * <p>
      * We currently won't put the refresh token
      * inside JWT. This is used by RefreshTokenService.
      */
@@ -33,6 +33,7 @@ public class JwtProperties {
     private String publicKey;
 
     public String getIssuer() {
+
         return issuer;
     }
 

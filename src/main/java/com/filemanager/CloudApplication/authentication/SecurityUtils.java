@@ -20,26 +20,21 @@ public final class SecurityUtils {
 
     public static UUID getCurrentUserId() {
 
-        Authentication authentication =
-                getAuthentication();
+        Authentication authentication = getAuthentication();
 
         if (authentication == null ||
                 !authentication.isAuthenticated()) {
 
-            throw new IllegalStateException(
-                    "No authenticated user"
-            );
+            throw new IllegalStateException("No authenticated user");
+
         }
 
-        return UUID.fromString(
-                authentication.getName()
-        );
+        return UUID.fromString(authentication.getName());
     }
 
     public static Jwt getCurrentJwt() {
 
-        Authentication authentication =
-                getAuthentication();
+        Authentication authentication = getAuthentication();
 
         if (authentication == null) {
             throw new IllegalStateException(

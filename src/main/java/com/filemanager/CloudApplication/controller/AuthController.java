@@ -185,14 +185,9 @@ public class AuthController {
             HttpServletRequest httpRequest,
             HttpServletResponse httpResponse) {
 
-        String refreshToken =
-                extractRefreshToken(httpRequest);
-
-        String ipAddress =
-                extractClientIp(httpRequest);
-
-        String userAgent =
-                httpRequest.getHeader("User-Agent");
+        String refreshToken = extractRefreshToken(httpRequest);
+        String ipAddress = extractClientIp(httpRequest);
+        String userAgent = httpRequest.getHeader("User-Agent");
 
         authService.logout(
                 refreshToken,
@@ -234,11 +229,8 @@ public class AuthController {
     @GetMapping("/me")
     public ResponseEntity<UserResponse> me() {
 
-        UUID userId =
-                SecurityUtils.getCurrentUserId();
-
-        User user =
-                authService.getCurrentUser(userId);
+        UUID userId = SecurityUtils.getCurrentUserId();
+        User user = authService.getCurrentUser(userId);
 
         UserResponse response =
                 new UserResponse(
@@ -273,8 +265,6 @@ public class AuthController {
                  */
                 //.sameSite("None")
                 .sameSite("Lax")
-
-
                 .path("/api/auth")
 
                 .maxAge(
@@ -293,8 +283,7 @@ public class AuthController {
     private String extractRefreshToken(
             HttpServletRequest request) {
 
-        Cookie[] cookies =
-                request.getCookies();
+        Cookie[] cookies = request.getCookies();
 
         if (cookies == null) {
             return null;
@@ -302,8 +291,7 @@ public class AuthController {
 
         for (Cookie cookie : cookies) {
 
-            if (REFRESH_TOKEN_COOKIE.equals(
-                    cookie.getName())) {
+            if (REFRESH_TOKEN_COOKIE.equals(cookie.getName())) {
 
                 return cookie.getValue();
             }
@@ -332,8 +320,7 @@ public class AuthController {
     private String extractClientIp(
             HttpServletRequest request) {
 
-        String forwarded =
-                request.getHeader("X-Forwarded-For");
+        String forwarded = request.getHeader("X-Forwarded-For");
 
         if (forwarded != null &&
                 !forwarded.isBlank()) {
